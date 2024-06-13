@@ -9,7 +9,6 @@ local tpFootFov = 60
 local aimingFov = 90
 local lerp_duration = 0.5
 
-
 local fpCarFovSlider = root:slider("First Person Vehicle FOV", {"fpVehicleFov"}, "Changes first person fov in vehicles", 1, 360, 80, 1, function(val)
   fpCarFov = val
   lerp_fov(val, lerp_duration, "fpinveh")
@@ -26,9 +25,18 @@ local tpFootFovSlider = root:slider("Third Person On Foot FOV", {"tpFootFov"}, "
   tpFootFov = val
   lerp_fov(val, lerp_duration, "tponfoot")
 end)
-local lerpDurationSlider = root:text_input("Interpolation Speed", {"interpolationSpeed"}, "Changes how long your fov will take to interpolate (in seconds)",  function(on_input)
+local lerpDurationSlider = root:text_input("Interpolation Speed", {"fovInterpolationSpeed"}, "Changes how long your fov will take to interpolate (in seconds)",  function(on_input)
   lerp_duration = on_input
 end, "0.5")
+local disableAction = root:action("Reset and stop", {"fovInterpDisable"}, "Resets all values back to default and stops the script", function()
+  --set all affected commands to don't override and stop the script
+  menu.set_value(menu.ref_by_command_name("fovfpinveh"), -5)
+  menu.set_value(menu.ref_by_command_name("fovfponfoot"), -5)
+  menu.set_value(menu.ref_by_command_name("fovtpinveh"), -5)
+  menu.set_value(menu.ref_by_command_name("fovtponfoot"), -5)
+  menu.set_value(menu.ref_by_command_name("fovaiming"), -5)
+  util.stop_script()
+end)
 
 function lerp_fov(target_value, duration, fovType)
   local start_time = os.clock()
