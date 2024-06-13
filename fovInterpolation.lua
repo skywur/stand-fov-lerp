@@ -1,13 +1,12 @@
--- :jub:
-
-util.require_natives("1627063482")
+util.require_natives("1676318796")
 
 local root = menu.my_root()
 
 local fpCarFov = 80
 local fpFootFov = 90
-local tpCarFov = 80
+local tpCarFov = 90
 local tpFootFov = 60
+local aimingFov = 90
 local lerp_duration = 0.5
 
 
@@ -27,7 +26,7 @@ local tpFootFovSlider = root:slider("Third Person On Foot FOV", {"tpFootFov"}, "
   tpFootFov = val
   lerp_fov(val, lerp_duration, "tponfoot")
 end)
-local lerpDurationSlider = root:text_input("Interpolation Speed", {"interpolationSpeed"}, "Changes the speed at which your fov will interpolate",  function(on_input)
+local lerpDurationSlider = root:text_input("Interpolation Speed", {"interpolationSpeed"}, "Changes how long your fov will take to interpolate (in seconds)",  function(on_input)
   lerp_duration = on_input
 end, "0.5")
 
@@ -48,33 +47,66 @@ end
 
 
 local wasInVehicle = false
+local wasFpView = false
+
 
 util.create_tick_handler(function()
   local isInVehicle = PED.IS_PED_IN_ANY_VEHICLE(players.user_ped(), false)
+  local isFpView = CAM.GET_FOLLOW_PED_CAM_VIEW_MODE() == 4
+
   if wasInVehicle and not isInVehicle then
-    -- leaves vehicle
+    -- not in vehicle
     if not conditionsChanged then
       menu.set_value(menu.ref_by_command_name("fovtponfoot"), tpCarFov)
       menu.set_value(menu.ref_by_command_name("fovfponfoot"), fpCarFov)
       lerp_fov(tpFootFov, lerp_duration, "tponfoot")
       lerp_fov(fpFootFov, lerp_duration, "fponfoot")
-        conditionsChanged = true  -- set flag to true to prevent repeated execution
+      conditionsChanged = true  -- set flag to true to prevent repeated execution
+
+      -- set aiming fov for on foot
+      if isFpView then
+        menu.set_value(menu.ref_by_command_name("fovaiming"), fpFootFov)
+      else
+        menu.set_value(menu.ref_by_command_name("fovaiming"), tpFootFov)
+      end
     end
-elseif not wasInVehicle and isInVehicle then
-    -- enters vehicle
+  elseif not wasInVehicle and isInVehicle then
+    -- is in vehicle
     if not conditionsChanged then
       menu.set_value(menu.ref_by_command_name("fovtpinveh"), tpFootFov)
       menu.set_value(menu.ref_by_command_name("fovfpinveh"), fpFootFov)
       lerp_fov(tpCarFov, lerp_duration, "tpinveh")
       lerp_fov(fpCarFov, lerp_duration, "fpinveh")
       conditionsChanged = true  -- set flag to true to prevent repeated execution
+
+      -- set aiming fov for in vehicle
+      if isFpView then
+        menu.set_value(menu.ref_by_command_name("fovaiming"), fpCarFov)
+      else
+        menu.set_value(menu.ref_by_command_name("fovaiming"), tpCarFov)
+      end
     end
-else
+  elseif wasFpView ~= isFpView then
+    -- view mode changed
+    if isInVehicle then
+      if isFpView then
+        menu.set_value(menu.ref_by_command_name("fovaiming"), fpCarFov)
+      else
+        menu.set_value(menu.ref_by_command_name("fovaiming"), tpCarFov)
+      end
+    else
+      if isFpView then
+        menu.set_value(menu.ref_by_command_name("fovaiming"), fpFootFov)
+      else
+        menu.set_value(menu.ref_by_command_name("fovaiming"), tpFootFov)
+      end
+    end
+  else
     conditionsChanged = false  -- reset flag when the conditions are the same as the previous tick
-end
+  end
 
-wasInVehicle = isInVehicle  -- update the previous state
-
+  wasInVehicle = isInVehicle  -- update the previous state
+  wasFpView = isFpView  -- update the previous view mode
 end)
 
 util.keep_running()
